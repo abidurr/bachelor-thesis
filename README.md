@@ -1,0 +1,2 @@
+# bachelor-thesis
+This repository contains my Bachelor's thesis, which was completed in August 2019 at University College Groningen, the Netherlands. It is available under the CC BY-NC-SA 4.0 license. It basically involved the comparison of five machine learning classifiers in categorizing Monte Carlo data generated for the Major Atmospheric Gamma Imaging Telescopes. The Random Forest and Neural Network algorithms performed most desirably.
