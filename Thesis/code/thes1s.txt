@@ -1,0 +1,102 @@
+
+
+Clear["Global`*"]
+dataSet=SemanticImport["X:\\My Downloads\\magic04.data",{"Real", "Real", "Real", "Real", "Real","Real", "Real", "Real", "Real", "Real", "String"}];
+
+
+(*Let us now begin the process of creating models using machine learning.
+As mentioned above,we combined dataset to create the model,and the rest will be used to test the model.
+We are feeling classifiers: DecisionTree, RandomForest, NearestNeighbors, NeuralNetwork and LogisticRegression using the two-class pass or fail system.
+Functions used:
+trainingFraction-Fraction of data taken for training 
+ntrain-Number of instances used for training 
+classifierSet-Dataset reduced to the features given in featureList 
+numberOfCrossValidations-Number of cross validations to run 
+featureList-List of features used in classification 
+cmethod-List of methods to be run 
+cfunc-Table containing the classifier function 
+errorTraining-Table containing the errors of training data 
+errorTest-Table containing the errors of test data All tables are 2D,i,j-i=method,j=cross validated sample*)
+
+trainingFraction=0.5;
+numberOfCrossValidations=20;
+
+featureList = {"fLength","fWidth","fSize","fConc","fConc1","fAsym","fM3Long","fM3Trans","fAlpha","fDist","class"};
+
+classifierSet = dataSet[All,featureList];
+
+(*setting the fraction of training data from the total sample*)
+ntrain=Round[trainingFraction Length[classifierSet]];
+
+cmethod={"NeuralNetwork","DecisionTree","RandomForest","NearestNeighbors","LogisticRegression"};
+
+
+(*initializing list of classifierFunctions*)
+cfunc=Table [0,i,1,Length[cmethod],j,1,numberOfCrossValidations ];
+
+(* initializing table that will contain the errors for training and test datasets for all classifiers *)
+errorTraining=Table[0,{i,1,Length[cmethod]},{j,1,numberOfCrossValidations}];
+errorTest=Table[0,{i,1,Length[cmethod]},{j,1,numberOfCrossValidations}];
+
+Do[
+(* shuffling the dataset *)
+classifierSet = classifierSet[RandomSample];
+
+(* setting up the training set *)
+trainingSet = classifierSet[1;;ntrain];
+
+(* the rest will be the test dataset *)
+testSet = classifierSet[ntrain+1;;Length[dataSet]];
+
+(*running over all cross-validated samples and classifier methods and creating classifier function for the respective classifier method*)
+Do[
+cfunc[[i,j]] = Classify[
+trainingSet -> "class",
+Method-> cmethod[[i]],
+FeatureExtractor -> "StandardizedVector",
+TrainingProgressReporting->"ProgressIndicator"
+];
+
+(* calculating some errors for test and training datasets *)
+errorTest[[i,j]] = ClassifierMeasurements[cfunc[[i,j]],testSet -> "class","Error"];
+errorTraining[[i,j]]= ClassifierMeasurements[cfunc[[i,j]],trainingSet -> "class","Error"];
+
+(* for the first training set, print some usefull information *)
+If[
+j==1, (* only print for the first data set *)
+Print@ClassifierInformation[cfunc[[i,1]]]; Print@ClassifierMeasurements[cfunc[[i,1]],testSet -> "class", "ConfusionMatrixPlot"]
+]; 
+,{i,Length[cmethod]} (* looping over number of classifiers *)
+];
+,{j,numberOfCrossValidations} (* looping over number of cross validations *)
+];
+ DynamicClassifierInformation::mlobs: ClassifierInformation is obsolete. It has been superseeded by Information since version 12.
+(Debug) During evaluation of In[10]:= Information[Table[0,i,1,Length[cmethod] ,j,1,numberOfCrossValidations ][[1,1]]]
+
+(* let us now look at the errors, average and standard deviation *)
+Print["Errors, mean +- standard deviations:"]
+
+Do[
+Print["Train@",cmethod[[i]],": ",
+	Mean[errorTraining[[i]]],"+-",StandardDeviation[errorTraining[[i]]]
+	];
+Print["Test@",cmethod[[i]],": ",
+	Mean[errorTest[[i]]],"+-",StandardDeviation[errorTest[[i]]]
+	];
+,{i,1,Length[cmethod]}
+]
+
+(* let us look at a histogram of the errors of the cross validated samples for DecisionTree and RandomForest *)
+PairedHistogram[
+errorTraining[[1]],
+errorTraining[[2]],
+5,
+ChartLabels -> Placed[{cmethod[[1]],cmethod[[2]]},Top]
+]
+PairedHistogram[
+errorTest[[1]],
+errorTest[[2]],
+5,
+ChartLabels -> Placed[{cmethod[[1]],cmethod[[2]]},Top]
+]
+ Mean[errorTraining[[5]]]+-StandardDeviation[errorTraining[[5]]]
